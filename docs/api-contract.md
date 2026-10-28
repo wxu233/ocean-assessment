@@ -26,7 +26,7 @@
 - `BulkResult`: `{operation_id, course_id, summary: {issued, skipped, failed}, results: [{learner_id, learner_name, outcome: "issued"|"skipped"|"failed", reason: null|"not_completed"|"already_certified"|"<error>", certificate_id: int|null}]}`
 
 **List and export parameters:**
-- `q` matches `learner_name` by prefix, ignoring case, **or** `serial` exactly or by prefix.
+- `q` matches `learner_name` by prefix **or** `serial` exactly or by prefix, both ignoring case.
 - `sort` is one of `issued_date | learner_name | course_title | serial | status`. Default: `issued_date`.
 - `dir` is `asc | desc`. Default: `desc`.
 - Rows are always tiebroken by `id ASC`.
@@ -35,3 +35,4 @@
 **CSV:**
 - Header row: `learner_name,course_title,serial,issued_local_date`
 - Rows come in exactly the list order for the same `q`, `sort` and `dir`.
+- A cell starting with `=`, `+`, `-`, `@`, tab or CR is prefixed with `'` so spreadsheets treat it as text, not a formula. Stored values are unchanged.
