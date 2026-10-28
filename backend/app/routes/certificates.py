@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from .. import queries
 from ..deps import Actor, get_actor, get_conn
 from ..errors import not_found
+from ..services.revoke import revoke_certificate
 
 router = APIRouter(prefix="/api/certificates")
 
@@ -35,6 +36,19 @@ def certificate_detail(
     conn: sqlite3.Connection = Depends(get_conn),
 ):
     cert = queries.get_certificate(conn, actor.tenant_id, cert_id)
+    if cert is None:
+        raise not_found()
+    return cert
+
+
+@router.post("/{cert_id}/revoke")
+def revoke(
+    cert_id: int,
+    actor: Actor = Depends(get_actor),
+    conn: sqlite3.Connection = Depends(get_conn),
+):
+    cert = revoke_certificate(conn, tenant_id=actor.tenant_id, admin_id=actor.admin_id,
+                              cert_id=cert_id)
     if cert is None:
         raise not_found()
     return cert
