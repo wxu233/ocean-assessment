@@ -3,3 +3,5 @@
 09:37 CORRECTED: removed UI testing from test extras, since it does not affect core system behavior. 
 
 10:34 S4 Decisions: ACCEPTED: node version checks and README.md skipped, as they're not yet implemented. 
+
+10:43 S6 Decisions: ACCEPTED: holds file in memory and accept the limitation, unknown paths returns 404. 
