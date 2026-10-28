@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 
 from . import errors
-from .routes import certificates, meta
+from .routes import bulk, certificates, meta
 
 
 def create_app() -> FastAPI:
@@ -11,6 +11,7 @@ def create_app() -> FastAPI:
     errors.install(app)
     app.include_router(meta.router)
     app.include_router(certificates.router)
+    app.include_router(bulk.router)
     return app
 
 
