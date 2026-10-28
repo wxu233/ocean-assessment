@@ -9,7 +9,6 @@ There is one test per scenario in `docs/brief.md` §4. Request shapes follow `do
 - **Database checks.** The test opens its own read-only `sqlite3` connection to the same file. "Certificate count" means `SELECT COUNT(*) FROM certificates` (optionally filtered). "Audit count" means `SELECT COUNT(*) FROM audit_events` (optionally filtered by `action` and `certificate_id`).
 - **Actors.** Alice sends `X-Actor-Token: east-alice-token`. Bob sends `X-Actor-Token: west-bob-token`.
 - **Seed lookups.** `EAST_SAFETY` and `WEST_SAFETY` are the ids of the Safety 101 course in each tenant. `EAST_CERT_A5` and `WEST_CERT_A5` are the seeded certificates issued at `2026-01-10T13:30:00Z`. All are looked up in the DB, not hard-coded.
-- **
 ---
 
 ## A1 — Tenant isolation
