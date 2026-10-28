@@ -54,3 +54,7 @@ Adds 100,000 East certificates under the course "Load Test 101", with repeated l
 
 - The UI's CSV download goes through `fetch` (the actor header can't be set on a plain link), so the browser holds the whole file in memory before saving it. The server still streams; a 100k export is a few MB.
 - The UI has no automated tests; its behaviours (loading/empty/error states, disabled submit while in flight, revoke confirmation, export keeping search and sort) are checked by hand.
+## Unfinished work
+
+- Bulk issue can't target chosen learners. The UI has no way to pick learners, and `POST /api/bulk-issues` takes only `course_id`, so a run issues to every learner who has completed the course and has no certificate yet.
+- Bugs found in the hostile review (R1–R10) are listed with reproductions in [`docs/review.md`](docs/review.md). None of them have been fixed yet.
