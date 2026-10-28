@@ -27,6 +27,17 @@ if [ -z "$PYTHON" ]; then
   exit 1
 fi
 
+# --- Node >= 18 (frontend build) ---
+if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+  echo "error: Node.js >= 18 with npm is required (node not found on PATH)." >&2
+  exit 1
+fi
+NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
+if [ "$NODE_MAJOR" -lt 18 ]; then
+  echo "error: Node.js >= 18 is required (found $(node -v))." >&2
+  exit 1
+fi
+
 # --- Backend install ---
 if [ ! -x .venv/bin/python ]; then
   echo "Creating .venv with $PYTHON"
@@ -34,7 +45,12 @@ if [ ! -x .venv/bin/python ]; then
 fi
 .venv/bin/python -m pip install --quiet --disable-pip-version-check -r backend/requirements.txt
 
-# --- Frontend build: added with the UI slice (S6) ---
+# --- Frontend install (from the lockfile) and build into frontend/dist ---
+if [ ! -f frontend/node_modules/.package-lock.json ] ||
+   [ frontend/package-lock.json -nt frontend/node_modules/.package-lock.json ]; then
+  (cd frontend && npm ci --no-audit --no-fund)
+fi
+(cd frontend && npm run build --silent)
 
 # --- Seed (idempotent; --reset recreates) ---
 .venv/bin/python -m backend.scripts.seed $RESET
