@@ -138,3 +138,76 @@ Refer to @docs/invariants.md
 - If a requirement is ambiguous, ask. Don't invent behaviour.
 - Never modify `docs/brief.md` or `written-answers.md`.
 - Keep `README.md` current: startup, actor tokens, how to reproduce A1–A7, 100k generation, known defects.
+
+## Build order
+
+Total 70 min: 55 min of backend, then a protected 15-min UI slice starting at T+55 (no later than T+60). Slices are ordered by dependency, and riskiest first where dependencies allow. A slice is done only when its pytest selection passes. All commands assume `.venv/bin/python -m pytest`.
+
+| # | Slice | Time | Window | Depends on |
+|---|---|---|---|---|
+| S1 | Foundation and read path | 15 | T+0 → 15 | — |
+| S2 | Bulk issue and idempotency (A2, A3, A4) | 15 | T+15 → 30 | S1 |
+| S3 | Export, generator, tenant isolation (A1, A5, A6) | 12 | T+30 → 42 | S1, S2 |
+| S4 | Revocation (A7) | 8 | T+42 → 50 | S1, S2 |
+| S5 | `verify.sh` and full green run | 5 | T+50 → 55 | S1–S4 |
+| S6 | UI (protected) | 15 | T+55 → 70 | S1–S5 |
+
+**S1 — Foundation and read path**
+- **Scope:**
+  - `requirements.txt` pinning fastapi, uvicorn, tzdata and pytest
+  - `db.py`: the schema plus the connection settings, with `APP_DB_PATH` honoured
+  - `issue_certificate`, the single insert helper
+  - `seed.py`, including the second East course and the two A5 certificates
+  - actor resolution from `X-Actor-Token` (401 when missing or unknown)
+  - the `/api/actors`, `/api/me` and `/api/courses` endpoints
+  - `GET /api/certificates/{id}`, with the same 404 for another tenant's id and a missing id
+- **Done:** `pytest -k "test_extra_local_date_around_dst_and_midnight"`
+
+**S2 — Bulk issue and idempotency.** Riskiest slice: SQLite write locking under concurrency.
+- **Scope:** `POST /api/bulk-issues` as one `BEGIN IMMEDIATE` transaction:
+  - the course's tenant is checked before anything is written
+  - the request is hashed, and reusing a key with a different request returns 409
+  - each learner is issued inside its own savepoint
+  - a duplicate certificate (UNIQUE violation) is reported as skipped; any other error is reported as failed
+  - unknown body fields return 422
+- **Done:** `pytest -k "test_a2_retry_safety or test_a3_key_misuse or test_a4_learner_outcomes or test_extra_rejected_cross_tenant_bulk_leaves_no_operation or test_extra_same_key_in_two_tenants_is_independent or test_extra_concurrent_same_key_different_courses or test_extra_extra_payload_fields_rejected or test_extra_failed_outcome_when_one_insert_fails"`
+
+**S3 — Export, generator, tenant isolation.** Second-riskiest slice: A6 streaming.
+- **Scope:**
+  - `build_cert_query()` with the sort whitelist and the id tiebreaker
+  - `GET /api/certificates`: list, search and pagination
+  - the streamed CSV export: a sync generator over its own connection, in one read transaction
+  - `gen_large.py`, producing repeated names and repeated issue dates and times
+- **Done:**
+  - `pytest -k "test_a1_tenant_isolation or test_a5_dst_and_local_date or test_a6_export_growth_1k or test_extra_a6_issued_date_desc_1k or test_extra_export_with_no_matches_is_header_only or test_extra_gen_large_keeps_quick_start_dataset"`
+  - and `pytest -m slow` (the 100k test, run once)
+
+**S4 — Revocation**
+- **Scope:** `POST /api/certificates/{id}/revoke` as a conditional update plus one audit event. A repeat returns 200 with the current state.
+- **Done:** `pytest -k "test_a7_revocation_audit or test_extra_repeat_revoke_returns_current_state or test_extra_concurrent_revokes_write_one_audit_event or test_extra_bob_cannot_revoke_east_certificate or test_extra_revoked_learner_is_skipped_on_bulk_issue or test_extra_missing_or_unknown_token_is_401"`
+- The 401 test lands here because it needs every endpoint to exist.
+
+**S5 — `verify.sh` and full green run**
+- **Scope:** write `verify.sh` (runs pytest on the `.venv` Python), write the backend part of `start.sh` (install, then seed if empty), then do a full regression run.
+- **Done:** `./verify.sh`, meaning plain `pytest`: all 21 default tests pass.
+
+**S6 — UI (protected 15 min)**
+- **Scope:**
+  - set up the Vite + React app; FastAPI serves the built files and sends unknown routes to `index.html`
+  - actor picker
+  - list with search, sort and pagination, plus loading, empty and error states
+  - detail view, with a confirmation step before revoking
+  - bulk issue with one idempotency key per submission, the button disabled while the request is in flight, and the per-learner results table
+  - export link that keeps the current search and sort
+  - finish `start.sh` with the npm build step
+- **Done:**
+  - `pytest` still passes in full
+  - `./start.sh` works from a clean clone
+  - a manual check of each UI behaviour (no pytest covers the UI)
+
+**If backend slices overrun**, the UI's 15 minutes stay protected and backend scope gets cut, in this order:
+1. Drop `test_extra_failed_outcome_when_one_insert_fails`.
+2. Drop `test_extra_concurrent_same_key_different_courses`.
+3. Drop `test_extra_extra_payload_fields_rejected`.
+
+A1–A7 are never cut. Anything dropped is listed as a known gap in the README.
