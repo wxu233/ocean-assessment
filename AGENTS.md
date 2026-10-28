@@ -138,6 +138,10 @@ Refer to @docs/invariants.md
 - If a requirement is ambiguous, ask. Don't invent behaviour.
 - Never modify `docs/brief.md` or `written-answers.md`.
 - Keep `README.md` current: startup, actor tokens, how to reproduce A1–A7, 100k generation, known defects.
+- Commit after each slice, only with tests green; the message references scenario IDs.
+- Never weaken, skip or delete a test without my approval and a state reason.
+- Stay within the brief's scope: no auth system, no deployment, no extra features.
+
 
 ## Build order
 
